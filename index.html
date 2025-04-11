@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portais</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script>
+    let currentPortalState = null; // "active" ou "inactive"
+
+    function startRaidTimer(duration, display) {
+      let timer = duration, minutes, seconds;
+      setInterval(function () {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        display.textContent = minutes + ":" + seconds;
+
+        if (--timer < 0) {
+          timer = duration; // reset
+        }
+      }, 1000);
+    }
+
+    function startPortalTimer(duration, display) {
+  let timer = duration;
+  const interval = setInterval(() => {
+    const minutes = Math.floor(timer / 60);
+    const seconds = timer % 60;
+    display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    if (--timer < 0) {
+      clearInterval(interval);
+      showInactivePortalState(); // chama a nova função ao terminar
+    }
+  }, 1000);
+}
+
+
+
+function startNextPortalTimer(duration, display) {
+  let timer = duration;
+  const interval = setInterval(() => {
+    const minutes = Math.floor(timer / 60);
+    const seconds = timer % 60;
+    display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    if (--timer < 0) {
+      clearInterval(interval);
+      updatePortalState(); // troca de volta para portal ativo
+    }
+  }, 1000);
+}
+
+
+    function showInactivePortalState() {
+  const container = document.getElementById('portal-container');
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  let remainingSeconds;
+
+  if (minutes < 15) {
+    remainingSeconds = (30 * 60) - (minutes * 60 + seconds);
+  } else if (minutes < 45) {
+    remainingSeconds = (60 * 60) - (minutes * 60 + seconds);
+  } else {
+    remainingSeconds = (90 * 60) - (minutes * 60 + seconds); // vai até xx:00 do próximo ciclo
+  }
+
+  container.innerHTML = `
+    <div class="text-2xl font-semibold text-center text-gray-300">Nenhum portal ativo</div>
+    <div class="text-md mt-2">Próximo portal em:</div>
+    <div id="next-portal-timer" class="text-4xl font-bold mb-6">--:--</div>
+  `;
+
+  const nextDisplay = document.getElementById('next-portal-timer');
+  startNextPortalTimer(remainingSeconds, nextDisplay);
+}
+
+
+    window.onload = function () {
+      const raidDisplay = document.querySelector('#raid-timer');
+      const castleDisplay = document.querySelector('#castle-timer');
+      const portalDisplay = document.querySelector('#portal-timer');
+      function getSecondsUntilNextHourAt15() {
+  const now = new Date();
+  const next = new Date(now);
+  if (now.getMinutes() >= 15) {
+    next.setHours(now.getHours() + 1);
+  }
+  next.setMinutes(15);
+  next.setSeconds(0);
+  return Math.floor((next - now) / 1000);
+}
+
+function startNextRaidCountdown(display) {
+  let timer = getSecondsUntilNextHourAt15();
+  const interval = setInterval(function () {
+    const minutes = Math.floor(timer / 60);
+    const seconds = timer % 60;
+
+    display.textContent =
+      (minutes < 10 ? "0" + minutes : minutes) +
+      ":" +
+      (seconds < 10 ? "0" + seconds : seconds);
+
+    if (--timer < 0) {
+      timer = getSecondsUntilNextHourAt15(); // reseta para a próxima xx:15
+    }
+  }, 1000);
+}
+
+if (raidDisplay) {
+  startNextRaidCountdown(raidDisplay);
+}
+      function getSecondsUntilNextHourAt45() {
+  const now = new Date();
+  const next = new Date(now);
+  if (now.getMinutes() >= 45) {
+    next.setHours(now.getHours() + 1);
+  }
+  next.setMinutes(45);
+  next.setSeconds(0);
+  return Math.floor((next - now) / 1000);
+}
+
+function startNextCastleCountdown(display) {
+  let timer = getSecondsUntilNextHourAt45();
+  const interval = setInterval(function () {
+    const minutes = Math.floor(timer / 60);
+    const seconds = timer % 60;
+
+    display.textContent =
+      (minutes < 10 ? "0" + minutes : minutes) +
+      ":" +
+      (seconds < 10 ? "0" + seconds : seconds);
+
+    if (--timer < 0) {
+      timer = getSecondsUntilNextHourAt45(); // reseta para a próxima xx:45
+    }
+  }, 1000);
+}
+
+if (castleDisplay) {
+  startNextCastleCountdown(castleDisplay);
+}
+if (portalDisplay) {
+  updatePortalState(); // usa a função com tempo sincronizado
+}     
+    };
+    // Notificação de permissão
+if (Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+// Salva preferências no localStorage
+function saveNotificationPrefs() {
+  const prefs = {
+    portals: document.getElementById('notif-portals').checked,
+    raid: document.getElementById('notif-raid').checked,
+    castle: document.getElementById('notif-castle').checked,
+  };
+  localStorage.setItem('notificationPrefs', JSON.stringify(prefs));
+}
+
+// Carrega preferências ao iniciar
+function loadNotificationPrefs() {
+  const prefs = JSON.parse(localStorage.getItem('notificationPrefs') || '{}');
+  document.getElementById('notif-portals').checked = prefs.portals || false;
+  document.getElementById('notif-raid').checked = prefs.raid || false;
+  document.getElementById('notif-castle').checked = prefs.castle || false;
+}
+
+// Ativar listener nos checkboxes
+document.addEventListener("DOMContentLoaded", () => {
+  loadNotificationPrefs();
+  ['notif-portals', 'notif-raid', 'notif-castle'].forEach(id => {
+    document.getElementById(id).addEventListener('change', saveNotificationPrefs);
+  });
+});
+
+// Envia notificação
+function notify(title, message) {
+  if (Notification.permission === "granted") {
+    new Notification(title, { body: message });
+  }
+}
+
+// Portal
+function updatePortalState() {
+  const container = document.getElementById('portal-container');
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  const isActive = (minutes >= 0 && minutes < 15) || (minutes >= 30 && minutes < 45);
+
+  if (isActive && currentPortalState !== "active") {
+    currentPortalState = "active";
+
+    const endMinute = (minutes < 15) ? 15 : 45;
+    const timeLeft = (endMinute * 60) - (minutes * 60 + seconds);
+
+    container.innerHTML = `
+      <div class="text-sm mb-2 font-semibold">Portal Atual</div>
+      <div class="text-md mb-2">Tempo restante:</div>
+      <div id="portal-timer" class="text-4xl font-bold mb-6">--:--</div>
+      <div class="flex justify-center">
+        <div class="text-center">
+          <img src="assets/portal-azul.png" alt="Portal Azul" class="w-48 h-48 mx-auto mb-2 rounded-xl">
+          <div class="text-2xl font-bold">Ilha ???</div>
+          <div class="text-purple-400 font-semibold text-lg">Rank ?</div>
+        </div>
+      </div>
+    `;
+
+    const portalDisplay = document.getElementById('portal-timer');
+    startPortalTimer(timeLeft, portalDisplay);
+
+    setTimeout(() => {
+      const prefs = JSON.parse(localStorage.getItem('notificationPrefs') || '{}');
+      if (prefs.portals) notify("Portal terminou", "O portal atual acabou!");
+    }, timeLeft * 1000);
+  }
+
+  else if (!isActive && currentPortalState !== "inactive") {
+    currentPortalState = "inactive";
+
+    let remainingSeconds;
+    if (minutes < 15) {
+      remainingSeconds = (15 * 60) - (minutes * 60 + seconds);
+    } else if (minutes < 30) {
+      remainingSeconds = (30 * 60) - (minutes * 60 + seconds);
+    } else if (minutes < 45) {
+      remainingSeconds = (45 * 60) - (minutes * 60 + seconds);
+    } else {
+      remainingSeconds = (60 * 60) - (minutes * 60 + seconds);
+    }
+
+    container.innerHTML = `
+      <div class="text-2xl font-semibold text-center text-gray-300">Nenhum portal ativo</div>
+      <div class="text-md mt-2">Próximo portal em:</div>
+      <div id="next-portal-timer" class="text-4xl font-bold mb-6">--:--</div>
+    `;
+
+    const nextDisplay = document.getElementById('next-portal-timer');
+    startNextPortalTimer(remainingSeconds, nextDisplay);
+  }
+
+  setTimeout(updatePortalState, 30 * 1000); // continua monitorando
+}
+
+// Raid Dedu
+const raidDisplay = document.getElementById("raid-display");
+
+if (raidDisplay) {
+  startNextRaidCountdown(raidDisplay);
+  setTimeout(() => {
+    const prefs = JSON.parse(localStorage.getItem('notificationPrefs') || '{}');
+    if (prefs.raid) notify("Raid Dedu", "Começou a Raid Dedu!");
+  }, getSecondsUntilNextHourAt15() * 1000);
+}
+
+// Castelo Demoniaco
+if (castleDisplay) {
+  startNextCastleCountdown(castleDisplay);
+  setTimeout(() => {
+    const prefs = JSON.parse(localStorage.getItem('notificationPrefs') || '{}');
+    if (prefs.castle) notify("Castelo Demoniaco", "Começou o Castelo Demoniaco!");
+  }, getSecondsUntilNextHourAt45() * 1000);
+}
+
+  </script>
+  <style>
+    .blue-glow-container {
+      position: relative;
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+
+    .blue-glow-container::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(0, 153, 255, 0.3) 0%, transparent 70%);
+      z-index: 0;
+    }
+
+    .blue-glow-container > * {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white">
+  <header class="bg-gray-800 py-6 text-center text-3xl font-bold text-white shadow-md">
+    Portais
+  </header>
+
+  <div class="max-w-4xl mx-auto p-6">
+    <div class="flex justify-center mb-6">
+      <div class="flex gap-4 bg-gray-800 p-2 rounded-full shadow-inner">
+        <button class="px-6 py-2 bg-gray-700 text-white rounded-full font-semibold">Portais</button>
+      </div>
+    </div>
+
+    <div id="portal-container" class="blue-glow-container bg-gray-800 p-6 rounded-xl shadow-lg text-center">
+      <div class="text-sm mb-2 font-semibold">Portal Atual</div>
+      <div class="text-md mb-2">Tempo restante:</div>
+      <div id="portal-timer" class="text-4xl font-bold mb-6">15:00</div>
+
+      <div class="flex justify-center">
+        <div class="text-center">
+          <img src="assets/portal-vermelho.png" alt="Portal Vermelho" class="w-48 h-48 mx-auto mb-2 rounded-xl">
+          <div class="text-2xl font-bold">Ilha ???</div>
+          <div class="text-purple-400 font-semibold text-lg">Rank ???</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 bg-gray-800 p-6 rounded-xl shadow-lg">
+      <h2 class="text-xl font-bold text-center mb-4">Portais Anteriores</h2>
+      <div class="flex justify-around">
+        <div class="text-center">
+          <img src="assets/portal-azul.png" alt="Portal Grass" class="w-14 h-14 mx-auto mb-2">
+          <div class="font-semibold">Ilha ???</div>
+          <div class="text-purple-300">Rank ?</div>
+        </div>
+        <div class="text-center">
+          <img src="assets/portal-azul.png" alt="Portal MoriTown" class="w-14 h-14 mx-auto mb-2">
+          <div class="font-semibold">Ilha ???</div>
+          <div class="text-purple-300">Rank ?</div>
+        </div>
+        <div class="text-center">
+          <img src="assets/portal-azul.png" alt="Portal ???" class="w-14 h-14 mx-auto mb-2">
+          <div class="font-semibold">Ilha ???</div>
+          <div class="text-purple-200">Rank ?</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 bg-gray-800 p-6 rounded-xl shadow-lg text-center border border-gray-700">
+      <div class="text-lg font-semibold mb-2">Próxima Raid Dedu</div>
+      <div id="raid-timer" class="text-2xl font-bold">45:00</div>
+    </div>
+
+    <div class="mt-6 bg-gray-800 p-6 rounded-xl shadow-lg text-center border border-gray-700">
+      <div class="text-lg font-semibold mb-2">Próximo Castelo Infernal</div>
+      <div id="castle-timer" class="text-2xl font-bold">10:00</div>
+    </div>
+  </div>
+
+  <div class="mt-10 bg-gray-800 p-6 rounded-xl shadow-lg text-center border border-gray-700">
+    <h2 class="text-xl font-bold mb-4">Notificações</h2>
+    <p class="mb-4 text-gray-300">Escolha quais alertas deseja receber:</p>
+    <div class="flex flex-col items-center gap-2">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="notif-portals" class="form-checkbox text-blue-500" />
+        <span>Portais</span>
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="notif-raid" class="form-checkbox text-blue-500" />
+        <span>Raid Dedu</span>
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="notif-castle" class="form-checkbox text-blue-500" />
+        <span>Castelo Demoniaco</span>
+      </label>
+      <p class="text-sm text-gray-400 mt-2">As preferências são salvas no seu navegador.</p>
+    </div>
+  </div>
+  
+  <footer class="mt-12 bg-gray-800 text-center py-6 border-t border-gray-700">
+    <p class="text-white text-lg font-semibold">Site feito por Ph</p>
+    <p class="text-gray-400 mb-4">@iampedroh</p>
+    <a href="https://discord.gg/rGQs7C6V" target="_blank" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full transition">
+      entre na nossa comunidade do discord!
+    </a>
+  </footer>
+
+</body>
+</html>
